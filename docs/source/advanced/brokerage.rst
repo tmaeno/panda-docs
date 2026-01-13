@@ -640,9 +640,10 @@ This is the ATLAS analysis job brokerage flow:
        * The queue status must be *online* unless the queues are pre-assigned.
 
        * Input data locality check to skip queues if they don't have input data locally. This check is suppressed
-         if ``taskPriority`` :raw-html:`&GreaterEqual;` 2000 or
-         ``ioIntensity`` :raw-html:`&le;` ``IO_INTENSITY_CUTOFF_USER``
-         (defined in :doc:`gdpconfig </advanced/gdpconfig>`).
+         if ``taskPriority`` :raw-html:`&GreaterEqual;` 2000,
+         ``ioIntensity`` :raw-html:`&le;` ``IO_INTENSITY_CUTOFF_USER``, or the last successful brokerage cycle
+         happened more than ``DATA_CHECK_TIMEOUT_USER`` hours ago, where ``IO_INTENSITY_CUTOFF_USER`` and
+         ``DATA_CHECK_TIMEOUT_USER`` are defined in :doc:`gdpconfig </advanced/gdpconfig>`.
 
        * Check with ``MAX_DISKIO_DEFAULT`` limit defined in :doc:`gdpconfig </advanced/gdpconfig>`.
          It is possible to overwrite the limit for a particular queue through the ``maxDiskIO`` (in kB/sec per core)
