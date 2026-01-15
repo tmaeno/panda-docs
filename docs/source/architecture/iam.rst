@@ -260,10 +260,12 @@ The file may include the following optional attributes:
 
  * "secondary_ids"
  * "robot_ids"
+ * "jwt_profile"
 
-The former comprises a list of OIDC client IDs used by clients accessing the PanDA server on behalf
-of the user via ID tokens, while the latter consists of OIDC client IDs used by robotic clients like
-the pilot accessing the PanDA server via access tokens.
+The "secondary_ids" comprises a list of OIDC client IDs used by clients accessing the PanDA server on behalf
+of the user via ID tokens, while "robot_ids" consists of OIDC client IDs used by robotic clients like
+the pilot accessing the PanDA server via access tokens. The "jwt_profile" specifies the JWT profile used for
+token validation. E.g., "wlcg" if it differs from the default "iam" profile.
 
 Those configuration files must be reachable through Web interface of the PanDA server, so that make sure that
 the directory needs to be exposed in ``httpd.conf`` like
