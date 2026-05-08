@@ -163,6 +163,9 @@ paused
 throttled
    The task is throttled not to generate new jobs.
 
+exhausted
+   Indicating that the system gave up processing the task due to persistent failures, inefficiencies, or resource-related issues, and user intervention or reconfiguration is required.
+
 -------
 
 |br|
