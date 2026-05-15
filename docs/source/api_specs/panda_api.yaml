@@ -11,16 +11,23 @@ info:
     \ server will not accept HTTP requests unless explicitly mentioned.\n\n### HTTP\
     \ methods:\n* GET: Retrieve data from the server. Parameters have to be sent **in\
     \ the URL**. List parameters are passed by repeating the parameter name (e.g.\
-    \ `?job_ids=1&job_ids=2`).\n```\nexport pandaurl=https://pandaserver.cern.ch:25443\n\
+    \ `?job_ids=1&job_ids=2`).\n```bash\nexport pandaurl=https://pandaserver.cern.ch:25443\n\
     \  curl --capath \"${X509_CERT_DIR}\"     --cert \"${X509_USER_PROXY}\"     --key\
     \ \"${X509_USER_PROXY}\"     \"${pandaurl}/api/v1/task/get_status?task_id=12345\"\
-    \n```\n* PUT: Update data on the server. Parameters have to be sent **in the body**\
-    \ in json encoded format. When the client wants to gzip the data, the content\
-    \ encoding has to be set accordingly.\n```\nexport pandaurl=https://pandaserver.cern.ch:25443\n\
+    \n```\n```python\nimport os\nimport requests\n\npandaurl = \"https://pandaserver.cern.ch:25443\"\
+    \nproxy = os.environ[\"X509_USER_PROXY\"]\nresponse = requests.get(\n    f\"{pandaurl}/api/v1/task/get_status\"\
+    ,\n    params={\"task_id\": 12345},\n    cert=(proxy, proxy),\n    verify=os.environ[\"\
+    X509_CERT_DIR\"],\n)\n```\n* PUT: Update data on the server. Parameters have to\
+    \ be sent **in the body** in json encoded format. When the client wants to gzip\
+    \ the data, the content encoding has to be set accordingly.\n```bash\nexport pandaurl=https://pandaserver.cern.ch:25443\n\
     curl --capath \"${X509_CERT_DIR}\"   --cert \"${X509_USER_PROXY}\"   --key \"\
     ${X509_USER_PROXY}\"   --json '{\"task_id\": 12345}'   \"${pandaurl}/api/v1/file_server/upload_file_recovery_request\"\
-    \n```\n\n### Response formats: \nThe return codes are usually specified with each\
-    \ API function, but in general:\n* 200: Function called correctly and response\
+    \n```\n```python\nimport os\nimport requests\n\npandaurl = \"https://pandaserver.cern.ch:25443\"\
+    \nproxy = os.environ[\"X509_USER_PROXY\"]\nresponse = requests.post(\n    f\"\
+    {pandaurl}/api/v1/file_server/upload_file_recovery_request\",\n    json={\"task_id\"\
+    : 12345},\n    cert=(proxy, proxy),\n    verify=os.environ[\"X509_CERT_DIR\"],\n\
+    )\n```\n\n### Response formats: \nThe return codes are usually specified with\
+    \ each API function, but in general:\n* 200: Function called correctly and response\
     \ will be `Content-type: application/json`. This does not necessarily mean that\
     \ the operation was successful, but that the function was called correctly.  \
     \   Reasons why the operation could fail are:\n    * Wrong parameters or the JSON\
