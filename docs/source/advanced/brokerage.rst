@@ -206,7 +206,7 @@ Here is the ATLAS production job brokerage flow:
 
        * The nucleus storage endpoints must allow receivng and sending files over WAN (``write_wan`` = ``ON`` and ``read_wan`` = ``ON``).
 
-   * If scout or merge jobs, skip queues if their ``maxtime`` is less than 24 hours.
+   * For scout or walltime-undefined jobs, skip queues if their ``maxtime`` is less than 24 hours.
 
    * The estimated walltime for a job is
 
@@ -700,6 +700,8 @@ This is the ATLAS analysis job brokerage flow:
 
        * Analysis job walltime is estimated using the same formula as that for production jobs.
          The estimated walltime must be between ``mintime`` and ``maxtime`` at the queue.
+
+       * For scout, merge, or walltime-undefined jobs, skip queues if their ``maxtime`` is less than 24 hours.
 
        * Skip queues without pilots for the last 3 hours.
 
