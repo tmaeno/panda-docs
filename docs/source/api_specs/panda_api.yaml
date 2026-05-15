@@ -10,26 +10,33 @@ info:
   description: "\n### Protocol: we generally require communication over HTTPS. The\
     \ server will not accept HTTP requests unless explicitly mentioned.\n\n### HTTP\
     \ methods:\n* GET: Retrieve data from the server. Parameters have to be sent **in\
-    \ the URL**.\n* PUT: Update data on the server. Parameters have to be sent **in\
-    \ the body** in json encoded format. When the client wants to gzip the data, the\
-    \ content encoding has to be set accordingly.\n\n### Response formats: \nThe return\
-    \ codes are usually specified with each API function, but in general:\n* 200:\
-    \ Function called correctly and response will be `Content-type: application/json`.\
-    \ This does not necessarily mean that the operation was successful, but that the\
-    \ function was called correctly.     Reasons why the operation could fail are:\n\
-    \    * Wrong parameters or the JSON could not be decoded.\n    * The function\
-    \ was called using the wrong HTTP method (e.g. GET instead of PUT).  \n    * The\
-    \ function expects authentication (certificate/token) and it was not provided.\n\
-    \    * The function expects production role and it was not provided.\n    * Caught\
-    \ exceptions when interacting with the database.\n    \nThe usual response dictionary\
-    \ has the following format:\n```\n{ \"success\": True/False, \"message\": \"Usually\
-    \ an error when there was a failure. The message can generally be ignored if the\
-    \ operation was successful.\", \"data\": \"The data returned if the operation\
-    \ was successful.\" }\n```\n* 403: Forbidden. The client called a forbidden function\
-    \ or there was an authentication issue. The response will use `Content-type: text/plain`.\n\
-    * 500: Server crashed calling the method. The response will use `Content-type:\
-    \ text/plain`.\n* 503: The server is overloaded. The call did not reach PanDA\
-    \ and the response comes from directly `httpd`. \n"
+    \ the URL**. List parameters are passed by repeating the parameter name (e.g.\
+    \ `?job_ids=1&job_ids=2`).\n```\nexport pandaurl=https://pandaserver.cern.ch:25443\n\
+    \  curl --capath \"${X509_CERT_DIR}\"     --cert \"${X509_USER_PROXY}\"     --key\
+    \ \"${X509_USER_PROXY}\"     \"${pandaurl}/api/v1/task/get_status?task_id=12345\"\
+    \n```\n* PUT: Update data on the server. Parameters have to be sent **in the body**\
+    \ in json encoded format. When the client wants to gzip the data, the content\
+    \ encoding has to be set accordingly.\n```\nexport pandaurl=https://pandaserver.cern.ch:25443\n\
+    curl --capath \"${X509_CERT_DIR}\"   --cert \"${X509_USER_PROXY}\"   --key \"\
+    ${X509_USER_PROXY}\"   --json '{\"task_id\": 12345}'   \"${pandaurl}/api/v1/file_server/upload_file_recovery_request\"\
+    \n```\n\n### Response formats: \nThe return codes are usually specified with each\
+    \ API function, but in general:\n* 200: Function called correctly and response\
+    \ will be `Content-type: application/json`. This does not necessarily mean that\
+    \ the operation was successful, but that the function was called correctly.  \
+    \   Reasons why the operation could fail are:\n    * Wrong parameters or the JSON\
+    \ could not be decoded.\n    * The function was called using the wrong HTTP method\
+    \ (e.g. GET instead of PUT).  \n    * The function expects authentication (certificate/token)\
+    \ and it was not provided.\n    * The function expects production role and it\
+    \ was not provided.\n    * Caught exceptions when interacting with the database.\n\
+    \    \nThe usual response dictionary has the following format:\n```\n{ \"success\"\
+    : True/False, \"message\": \"Usually an error when there was a failure. The message\
+    \ can generally be ignored if the operation was successful.\", \"data\": \"The\
+    \ data returned if the operation was successful.\" }\n```\n* 403: Forbidden. The\
+    \ client called a forbidden function or there was an authentication issue. The\
+    \ response will use `Content-type: text/plain`.\n* 500: Server crashed calling\
+    \ the method. The response will use `Content-type: text/plain`.\n* 503: The server\
+    \ is overloaded. The call did not reach PanDA and the response comes from directly\
+    \ `httpd`. \n"
 paths:
   /v1/creds/set_user_secrets:
     post:
@@ -454,7 +461,7 @@ paths:
         request will be created with the newly selected destination RSE, excluding
         the original destination.
 
-        The reqeusts can be specified by request_id or dataset (if both exist, request_id
+        The requests can be specified by request_id or dataset (if both exist, request_id
         is taken).
 
         Requires a secure connection production role.
@@ -637,7 +644,87 @@ paths:
 
         Only effective on queued requests.
 
-        The reqeusts can be specified by request_id or dataset (if both exist, request_id
+        The requests can be specified by request_id or dataset (if both exist, request_id
+        is taken).
+
+        Requires a secure connection production role.
+
+
+        '
+      tags:
+      - data_carousel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                request_id:
+                  type: integer
+                  description: request_id of the staging request, e.g. `123`
+                dataset:
+                  type: string
+                  description: dataset name of the staging request in the format of
+                    Rucio DID, e.g. `"mc20_13TeV:mc20_13TeV.700449.Sh_2211_Wtaunu_mW_120_ECMS_BFilter.merge.AOD.e8351_s3681_r13144_r13146_tid36179107_00"`
+              required:
+              - request_id
+              - dataset
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
+  /v1/data_carousel/retire_unused:
+    post:
+      summary: Retire unused staging request
+      description: 'If the request is done and has no related tasks, it can be retired
+        to clean up the DDM rules and replicas.
+
+        The requests can be specified by request_id or dataset (if both exist, request_id
         is taken).
 
         Requires a secure connection production role.
@@ -7287,6 +7374,108 @@ paths:
                 type: string
                 example: INTERNAL SERVER ERROR. The server encountered an internal
                   error and was unable to complete your request.
+  /v1/task/get_tasks_detailed_info_since:
+    get:
+      summary: Get detailed task info for tasks modified since a given time.
+      description: 'Fetches task IDs for tasks modified since ``since`` (max 30-day
+        window), applies optional
+
+        field filters, and returns full detail (all JediTaskSpec fields + jobParamsTemplate
+        +
+
+        taskParams) for each matching task. The request is always scoped to the authenticated
+        user
+
+        (DN from the request certificate) unless userName is explicity specified in
+        the filters.
+
+
+        Filters are split server-side: plain-value patterns (no regex metacharacters)
+        become SQL
+
+        equality conditions pushed to the DB; patterns with metacharacters are applied
+        in Python via
+
+        ``re.search`` on the full task dict returned by ``get_task_details_json``.
+
+
+        '
+      tags:
+      - task
+      parameters:
+      - name: since
+        in: query
+        required: true
+        type: string
+        description: time in the format ``%Y-%m-%d %H:%M:%S``
+      - name: filters
+        in: query
+        required: false
+        type: string
+        description: 'JSON-encoded dict of {field: pattern} pairs.
+
+          Plain values (no regex metacharacters) become SQL equality conditions.
+
+          Regex patterns (containing ``|``, ``.``, ``*``, etc.) are matched with
+
+          ``re.search`` after fetching full task details. Unrecognised field names
+          are
+
+          silently ignored. Example: ``{"status": "finished|done", "prodSourceLabel":
+          "user"}``'
+      - name: n_tasks
+        in: query
+        required: false
+        type: integer
+        description: maximum number of task IDs to retrieve (default 500)
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
   /v1/task/get_datasets_and_files:
     get:
       summary: Get datasets and files
@@ -7578,6 +7767,149 @@ paths:
         required: true
         type: integer
         description: JEDI task ID
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
+  /v1/task/get_parent_detailed_info:
+    get:
+      summary: Get detailed parent task info
+      description: 'Resolve the parent task from a given child task and return only
+        the parent
+
+        detailed information. Requires a secure connection.
+
+
+        '
+      tags:
+      - task
+      parameters:
+      - name: task_id
+        in: query
+        required: true
+        type: integer
+        description: child JEDI task ID
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
+  /v1/task/get_job_descriptions:
+    get:
+      summary: Get job descriptions for a task.
+      description: 'Resolves all PanDA job IDs associated with a JEDI task, retrieves
+        their job
+
+        descriptions including archive lookup, and returns them. Optionally filters
+
+        to only unsuccessful jobs (status ``failed``, ``cancelled``, or ``closed``).
+
+        Requires a secure connection.
+
+
+        '
+      tags:
+      - task
+      parameters:
+      - name: task_id
+        in: query
+        required: true
+        type: integer
+        description: JEDI task ID.
+      - name: unsuccessful_only
+        in: query
+        required: true
+        type: boolean
+        description: 'When True, return only failed, cancelled, or closed jobs.
+
+          Defaults to False.'
       responses:
         '200':
           description: Method called correctly
