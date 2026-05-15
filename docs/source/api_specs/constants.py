@@ -11,21 +11,47 @@ DESCRIPTION = """
 
 ### HTTP methods:
 * GET: Retrieve data from the server. Parameters have to be sent **in the URL**. List parameters are passed by repeating the parameter name (e.g. `?job_ids=1&job_ids=2`).
-```
+```bash
 export pandaurl=https://pandaserver.cern.ch:25443
   curl --capath "${X509_CERT_DIR}" \
     --cert "${X509_USER_PROXY}" \
     --key "${X509_USER_PROXY}" \
     "${pandaurl}/api/v1/task/get_status?task_id=12345"
 ```
-* PUT: Update data on the server. Parameters have to be sent **in the body** in json encoded format. When the client wants to gzip the data, the content encoding has to be set accordingly.
+```python
+import os
+import requests
+
+pandaurl = "https://pandaserver.cern.ch:25443"
+proxy = os.environ["X509_USER_PROXY"]
+response = requests.get(
+    f"{pandaurl}/api/v1/task/get_status",
+    params={"task_id": 12345},
+    cert=(proxy, proxy),
+    verify=os.environ["X509_CERT_DIR"],
+)
 ```
+* PUT: Update data on the server. Parameters have to be sent **in the body** in json encoded format. When the client wants to gzip the data, the content encoding has to be set accordingly.
+```bash
 export pandaurl=https://pandaserver.cern.ch:25443
 curl --capath "${X509_CERT_DIR}" \
   --cert "${X509_USER_PROXY}" \
   --key "${X509_USER_PROXY}" \
   --json '{"task_id": 12345}' \
   "${pandaurl}/api/v1/file_server/upload_file_recovery_request"
+```
+```python
+import os
+import requests
+
+pandaurl = "https://pandaserver.cern.ch:25443"
+proxy = os.environ["X509_USER_PROXY"]
+response = requests.post(
+    f"{pandaurl}/api/v1/file_server/upload_file_recovery_request",
+    json={"task_id": 12345},
+    cert=(proxy, proxy),
+    verify=os.environ["X509_CERT_DIR"],
+)
 ```
 
 ### Response formats: 
