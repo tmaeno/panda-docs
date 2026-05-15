@@ -10,8 +10,23 @@ DESCRIPTION = """
 ### Protocol: we generally require communication over HTTPS. The server will not accept HTTP requests unless explicitly mentioned.
 
 ### HTTP methods:
-* GET: Retrieve data from the server. Parameters have to be sent **in the URL**.
+* GET: Retrieve data from the server. Parameters have to be sent **in the URL**. List parameters are passed by repeating the parameter name (e.g. `?job_ids=1&job_ids=2`).
+```
+export pandaurl=https://pandaserver.cern.ch:25443
+  curl --capath "${X509_CERT_DIR}" \
+    --cert "${X509_USER_PROXY}" \
+    --key "${X509_USER_PROXY}" \
+    "${pandaurl}/api/v1/task/get_status?task_id=12345"
+```
 * PUT: Update data on the server. Parameters have to be sent **in the body** in json encoded format. When the client wants to gzip the data, the content encoding has to be set accordingly.
+```
+export pandaurl=https://pandaserver.cern.ch:25443
+curl --capath "${X509_CERT_DIR}" \
+  --cert "${X509_USER_PROXY}" \
+  --key "${X509_USER_PROXY}" \
+  --json '{"task_id": 12345}' \
+  "${pandaurl}/api/v1/file_server/upload_file_recovery_request"
+```
 
 ### Response formats: 
 The return codes are usually specified with each API function, but in general:
