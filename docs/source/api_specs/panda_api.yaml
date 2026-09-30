@@ -8338,7 +8338,7 @@ paths:
         taskParams + input-file progress) for each matching task. The request is always
         scoped to the
 
-        authenticated user (DN from the request certificate) unless userName is explicity
+        authenticated user (DN from the request certificate) unless userName is explicitly
         specified in
 
         the filters.
