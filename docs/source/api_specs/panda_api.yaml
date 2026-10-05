@@ -701,6 +701,18 @@ paths:
         required: false
         type: string
         description: key to get the token from the token cache. Defaults to None.
+      - name: audience
+        in: query
+        required: false
+        type: string
+        description: audience of the token, required for clients with audience_from_request.
+          Defaults to None.
+      - name: scope
+        in: query
+        required: false
+        type: string
+        description: space separated scopes, required for clients with scope_from_request.
+          Defaults to None.
       responses:
         '200':
           description: Method called correctly
