@@ -301,8 +301,8 @@ paths:
                 type: string
                 example: INTERNAL SERVER ERROR. The server encountered an internal
                   error and was unable to complete your request.
-  get_result:
-    post:
+  /v1/async_process/get_result:
+    get:
       summary: Get async request result
       description: "Poll for the results of an async request, of any type and from\
         \ any submitting module.\n\nThe response has two shapes, depending on what\
@@ -328,28 +328,22 @@ paths:
         , reason in\n    async_meta.error_msg), so it only tells the operation's outcome\
         \ once status is \"done\".\n    async_meta is present whenever the poll itself\
         \ succeeded, so a response without it is a\n    failure of this call (not\
-        \ found, not authorized) rather than a report about the request."
+        \ found, not authorized) rather than a report about the request.\n\n"
       tags:
       - async_process
-      requestBody:
+      parameters:
+      - name: async_id
+        in: query
         required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                async_id:
-                  type: string
-                  description: UUID returned by a submit_* endpoint
-                request_id:
-                  type: string
-                  description: 'the name async_id had before the rename, still accepted
-                    so callers
+        type: string
+        description: UUID returned by a submit_* endpoint
+      - name: request_id
+        in: query
+        required: true
+        type: string
+        description: 'the name async_id had before the rename, still accepted so callers
 
-                    that have not moved keep working; ignored when async_id is given'
-              required:
-              - async_id
-              - request_id
+          that have not moved keep working; ignored when async_id is given'
       responses:
         '200':
           description: Method called correctly
@@ -1631,7 +1625,7 @@ paths:
         required: true
         type: integer
         description: 'json encoded string with JEDI task ID + PanDA job ID pairs,
-          in the format `[{"task_id": <task>, "job_id": <job>}, ...]`'
+          in the format `[{"task_id": <task>, "panda_id": <job>}, ...]`'
       responses:
         '200':
           description: Method called correctly
