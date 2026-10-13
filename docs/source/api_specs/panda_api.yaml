@@ -220,6 +220,105 @@ paths:
                 type: string
                 example: INTERNAL SERVER ERROR. The server encountered an internal
                   error and was unable to complete your request.
+  /v1/async_process/submit_db_read_request:
+    post:
+      summary: Submit a read of the database
+      description: 'Submit a batch of queries reading tables of the database, to be
+        run asynchronously by one machine of the server, on its
+
+        read-only account and in one read-only transaction. The queries are structured,
+        not SQL: each reads one or more tables
+
+        of an allowlist with conditions on their columns, and an `in` may take its
+        values from the answer to an earlier query
+
+        of the batch. Only the number and the size of the queries are checked here.
+        The queries themselves are checked when
+
+        they run, each on its own, so a query refused or failed comes back with its
+        reason while the others are answered.
+
+        A query must look up an index, and its index lookups, keys x partitions touched,
+        must be within the server''s
+
+        db_read_probe_budget, and those of the whole batch within three times it.
+        The form of a query is described in pandaserver/asyncprocess/db_read/request_shape.py
+        and the
+
+        form of the answers in pandaserver/asyncprocess/db_read_handlers.py. Requires
+        a secure connection and a DN in the
+
+        allowAsyncRequest list.
+
+
+        '
+      tags:
+      - async_process
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                queries:
+                  type: array
+                  description: 'the queries, at most 10, e.g.
+
+                    `[{"tables": ["jobsActive4", "jobsArchived4"], "where": [["jediTaskID",
+                    "=", 123]], "columns": ["PandaID", "jobStatus"]}]`'
+                  items:
+                    type: object
+              required:
+              - queries
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
   /v1/async_process/submit_sleep_echo_request:
     post:
       summary: Submit sleep+echo request
@@ -4067,6 +4166,124 @@ paths:
                 type: string
                 example: INTERNAL SERVER ERROR. The server encountered an internal
                   error and was unable to complete your request.
+  /v1/job/get_status_history:
+    get:
+      summary: Get status history of jobs
+      description: 'Gets the status changes recorded for jobs in jobs_StatusLog, oldest
+        first for each job, optionally within a time window. Requires a secure connection.
+
+
+        Each job is looked up once in every daily partition of jobs_StatusLog the
+        window touches, and in every partition without a
+
+        window, so the most jobs one call may name is the db_read_probe_budget of
+        the server divided by the number of partitions
+
+        touched. A call naming more is refused, not cut short. Both numbers come back
+        with every answer, so a caller can split its
+
+        jobs into calls that fit. A window around the lifetimes of the jobs, e.g.
+        from their creationTime, lets one call take many
+
+        more jobs than the ~10 a call without a window takes.
+
+
+        The window is widened, so that a change is not missed when the clock of the
+        server that wrote a time such as creationTime
+
+        and the clock of the database differ by a little: both ends are first moved
+        out by 10 minutes, then to whole UTC days,
+
+        since back to the start of its day and until forward to the start of the next
+        day. Whole days touch no more daily
+
+        partitions; the 10 minutes add one only when an end lies within 10 minutes
+        of midnight.
+
+
+        POST is accepted too, with the arguments in a JSON body (Content-Type: application/json).
+        A GET puts every job ID in the
+
+        URL, and a web server refuses a request line over its limit with an HTTP error
+        before the call gets here: Apache''s
+
+        default of 8190 bytes holds about 420 job IDs. A form-encoded POST is refused,
+        since only the values of a GET are
+
+        converted from strings.
+
+
+        '
+      tags:
+      - job
+      parameters:
+      - name: job_ids
+        in: query
+        required: true
+        type: array
+        description: list of PanDA job IDs
+        items:
+          type: integer
+        collectionFormat: multi
+      - name: since
+        in: query
+        required: false
+        type: string
+        description: read only the changes at or after this time, in UTC, e.g. `2026-10-12
+          14:30:45` (ISO 8601 is accepted)
+      - name: until
+        in: query
+        required: false
+        type: string
+        description: read only the changes before this time, in UTC, in the same format
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
   /v1/job/generate_offline_execution_script:
     get:
       summary: Get execution script for a job.
@@ -7804,6 +8021,70 @@ paths:
     get:
       summary: Get task status
       description: 'Get the status of a given task. Requires secure connection.
+
+
+        '
+      tags:
+      - task
+      parameters:
+      - name: task_id
+        in: query
+        required: true
+        type: integer
+        description: JEDI Task ID
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
+  /v1/task/get_status_history:
+    get:
+      summary: Get task status history
+      description: 'Gets the status changes recorded for a task in TASKS_STATUSLOG,
+        oldest first. Requires a secure connection.
 
 
         '
