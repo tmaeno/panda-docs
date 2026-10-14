@@ -120,7 +120,9 @@ paths:
     post:
       summary: Submit a grep request
       description: 'Submit a grep request to be processed asynchronously on the target
-        service or machine.
+        service or machine. A line matches either a
+
+        regular expression or any of a list of fixed strings.
 
 
         '
@@ -133,12 +135,24 @@ paths:
             schema:
               type: object
               properties:
-                pattern:
-                  type: string
-                  description: grep pattern to search for
                 log_filename:
                   type: string
                   description: filename (not full path) of the log file under panda_config.logdir
+                pattern:
+                  type: string
+                  description: 'regular expression to search for, in the syntax of
+                    rg whether the file is compressed or not;
+
+                    mutually exclusive with fixed_strings'
+                fixed_strings:
+                  type: array
+                  description: 'strings to search for as they are, a line matching
+                    when it holds any of them
+
+                    (1..1000 strings, each 1..1000 characters and without a line break);
+                    mutually exclusive with pattern'
+                  items:
+                    type: string
                 service_name:
                   type: string
                   description: target service (e.g. "server", "jedi"); mutually exclusive
@@ -159,19 +173,157 @@ paths:
                     as an absent one'
                 tail_bytes:
                   type: integer
-                  description: 'search only the last this many bytes of the file (1..1073741824),
+                  description: 'search only the last this many bytes of the file (1..3221225472),
 
                     which is how to ask about recent activity in a multi-gigabyte
-                    log. Ignored for
+                    log. The search starts
 
-                    .gz files, where an arbitrary offset is not a valid stream'
+                    with the first whole line there. Ignored for .gz files, where
+                    an arbitrary offset is
+
+                    not a valid stream. On a slow disk the widest window takes about
+                    200 of the 240 s
+
+                    a grep may run'
+                whole_records:
+                  type: boolean
+                  description: "give each matching line with the rest of its log record:\
+                    \ the lines after it that do not\nstart with a time stamp (YYYY-MM-DD\
+                    \ HH:MM:SS), such as those of a traceback, up to the next line\
+                    \ that\ndoes. A record comes with at most 200 lines after its\
+                    \ matching line. The result of each machine is then\nJSON instead\
+                    \ of the lines: {\"records\": [...], \"window\": {...} or null}\n\
+                    - records: in the order of the file, each {\"offset\": int, \"\
+                    head\": bool, \"lines\": [str, ...], \"cut\": bool}.\n  offset\
+                    \ is the byte offset in the file, decompressed for a .gz, where\
+                    \ the first line given starts, the\n  same in any request until\
+                    \ the file is rotated. head is false when that line matched within\
+                    \ the lines\n  of a record whose first line did not match, and\
+                    \ so is not the start of its record. cut is true when\n  the record\
+                    \ has more lines than were given, which sets truncated too. lines\
+                    \ come without line breaks\n- window: for tail_bytes, {\"offset\"\
+                    : int, \"first_stamp\": str or None}: where the search started,\
+                    \ and\n  the time stamp of the first line from there that starts\
+                    \ with one. Every record starting at or after\n  that line was\
+                    \ searched whole; null without tail_bytes\nDefaults to False,\
+                    \ the matching lines alone as they are in the file"
               required:
-              - pattern
               - log_filename
+              - pattern
+              - fixed_strings
               - service_name
               - machine_name
               - max_matches
               - tail_bytes
+              - whole_records
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
+  /v1/async_process/submit_log_list_request:
+    post:
+      summary: Submit a log list request
+      description: 'Submit a request to list the log files under panda_config.logdir
+        on the target service or machine: every file whose
+
+        name starts with "panda-", the rotated ones too, so that a caller can choose
+        the files to grep by their names and
+
+        times rather than guess how the logs are rotated.
+
+
+        The result of each machine in /v1/async_process/get_result is a JSON list
+        of its files, in the order of their
+
+        names, `[{"name": str, "size": int, "mtime": "YYYY-MM-DD HH:MM:SS"}, ...]`
+        with mtime in UTC. It comes back
+
+        truncated when the list does not fit in 1 MB, which a machine keeping its
+        logs for months reaches; log_names
+
+        limits the list to the logs asked about.
+
+
+        '
+      tags:
+      - async_process
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                service_name:
+                  type: string
+                  description: target service (e.g. "server", "jedi"); mutually exclusive
+                    with machine_name
+                machine_name:
+                  type: string
+                  description: target specific machine hostname; mutually exclusive
+                    with service_name
+                log_names:
+                  type: array
+                  description: 'list only these logs and the files rotated from them:
+                    a file whose name is one of
+
+                    them, or is one of them followed by "-", so that panda-a.log takes
+                    in panda-a.log-20261012.gz but not
+
+                    panda-ab.log (1..100 names, each 1..255 characters starting with
+                    "panda-" and without "/"). A name with
+
+                    no file is left out of the list. Defaults to every file'
+                  items:
+                    type: string
+              required:
+              - service_name
+              - machine_name
+              - log_names
       responses:
         '200':
           description: Method called correctly
@@ -405,10 +557,10 @@ paths:
       summary: Get async request result
       description: "Poll for the results of an async request, of any type and from\
         \ any submitting module.\n\nThe response has two shapes, depending on what\
-        \ the request's handler stores.\n\nHandlers writing raw output (grep, sleep_echo)\
-        \ report one entry per machine:\n\n```\n{\n    \"success\": bool,        #\
-        \ whether this poll succeeded\n    \"message\": str,\n    \"data\": {\n  \
-        \      \"overall_status\": \"complete\" | \"pending\",\n        \"expected_machines\"\
+        \ the request's handler stores.\n\nHandlers writing raw output (grep, log_list,\
+        \ sleep_echo) report one entry per machine:\n\n```\n{\n    \"success\": bool,\
+        \        # whether this poll succeeded\n    \"message\": str,\n    \"data\"\
+        : {\n        \"overall_status\": \"complete\" | \"pending\",\n        \"expected_machines\"\
         : [str, ...],\n        \"results\": [{\"machine_name\": str, \"status\": str,\
         \ \"result\": str,\n                      \"truncated\": int, \"error_msg\"\
         : str, \"attempts\": int,\n                      \"started_at\": str, \"finished_at\"\
@@ -4101,6 +4253,19 @@ paths:
         file attributes. Requires a secure connection.
 
 
+        A job is looked for in the live tables first, and in the archive only when
+        it is in none of them, within the last 90 days.
+
+        By default a job that a database error kept from being read is null, as a
+        job not found is, after the live tables were
+
+        tried three times with 10 to 20 seconds between. With report_errors it is
+        {"error": code} instead, at the first error,
+
+        and a job that the live tables could not be read for is not looked for in
+        the archive.
+
+
         '
       tags:
       - job
@@ -4113,6 +4278,11 @@ paths:
         items:
           type: integer
         collectionFormat: multi
+      - name: report_errors
+        in: query
+        required: false
+        type: boolean
+        description: tell a database error from a job not found. Defaults to False.
       - name: timeout
         in: query
         required: false
@@ -4236,6 +4406,97 @@ paths:
         required: false
         type: string
         description: read only the changes before this time, in UTC, in the same format
+      responses:
+        '200':
+          description: Method called correctly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                    description: Indicates whether the request was successful (True)
+                      or not (False)
+                  message:
+                    type: string
+                    description: Message indicating the nature of the failure. Empty
+                      or meaningless if the request was successful.
+                  data:
+                    type: object
+                    description: The data returned if the operation is successful.
+                      Null if it fails or the method does not generate return data.
+                required:
+                - success
+                - message
+                - data
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: You are calling an undefined method is not allowed for the
+                  requested URL
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Resource not found
+        '500':
+          description: INTERNAL SERVER ERROR
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: INTERNAL SERVER ERROR. The server encountered an internal
+                  error and was unable to complete your request.
+  /v1/job/get_datasets_by_name:
+    get:
+      summary: Get datasets by name
+      description: 'Gets the rows of the PanDA Datasets table (the datasets jobs work
+        with, such as the _sub and _dis ones made for
+
+        them, not JEDI_Datasets) for the given names. Requires a secure connection.
+
+
+        Each name is looked up once in every partition of the table, which is partitioned
+        on modificationdate, so the most
+
+        names one call may give is the db_read_probe_budget of the server divided
+        by the number of partitions. A call giving
+
+        more is refused, not cut short. Both numbers come back with every answer,
+        so a caller can split its names into
+
+        calls that fit.
+
+
+        POST is accepted too, with the arguments in a JSON body (Content-Type: application/json).
+        A GET puts every name in
+
+        the URL, and a web server refuses a request line over its limit with an HTTP
+        error before the call gets here. A
+
+        form-encoded POST is refused, since only the values of a GET are converted
+        from strings.
+
+
+        '
+      tags:
+      - job
+      parameters:
+      - name: names
+        in: query
+        required: true
+        type: array
+        description: names of the datasets
+        items:
+          type: string
+        collectionFormat: multi
       responses:
         '200':
           description: Method called correctly
