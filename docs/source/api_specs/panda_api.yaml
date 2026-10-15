@@ -137,7 +137,17 @@ paths:
               properties:
                 log_filename:
                   type: string
-                  description: filename (not full path) of the log file under panda_config.logdir
+                  description: 'filename (not full path) of the log file under panda_config.logdir.
+                    A .gz is refused
+
+                    while the file it is compressed from is still there, as logrotate
+                    removes that file only once the .gz
+
+                    is complete: the machine''s result is then failed with an error_msg
+                    ending in "Being compressed", and
+
+                    the .gz may be asked about again later, as compressing a large
+                    log takes tens of minutes'
                 pattern:
                   type: string
                   description: 'regular expression to search for, in the syntax of
@@ -285,7 +295,10 @@ paths:
         truncated when the list does not fit in 1 MB, which a machine keeping its
         logs for months reaches; log_names
 
-        limits the list to the logs asked about.
+        limits the list to the logs asked about. A .gz still being compressed, which
+        a grep refuses, is left out, while
+
+        the file it is compressed from is listed.
 
 
         '
