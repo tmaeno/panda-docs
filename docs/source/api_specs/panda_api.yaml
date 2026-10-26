@@ -5398,6 +5398,18 @@ paths:
                     GPU requirements are not checked.
 
                     Optional and defaults to `None`.'
+                container_name:
+                  type: string
+                  description: 'The container image the worker is bound to, for a
+                    worker already running inside its
+
+                    image and unable to start another one. Only jobs whose `container_name`
+                    equals it are returned,
+
+                    so such a worker never acquires a job it cannot run. A worker
+                    that can run any image omits it.
+
+                    Optional and defaults to `None`.'
               required:
               - site_name
       responses:
