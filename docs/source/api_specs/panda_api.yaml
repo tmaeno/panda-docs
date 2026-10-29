@@ -4476,16 +4476,29 @@ paths:
         them, not JEDI_Datasets) for the given names. Requires a secure connection.
 
 
-        Each name is looked up once in every partition of the table, which is partitioned
-        on modificationdate, so the most
+        The table keeps one row per dataset, under the form of the name its first
+        writer used, scope:name or name. So each
 
-        names one call may give is the db_read_probe_budget of the server divided
-        by the number of partitions. A call giving
+        name is looked up in both forms: a name with a scope also without it, and
+        a name without one also with the scope
 
-        more is refused, not cut short. Both numbers come back with every answer,
-        so a caller can split its names into
+        its first part gives (up to the first dot, or up to the second for user and
+        group datasets), which is the scope
 
-        calls that fit.
+        the vuid of the dataset is made with. Every row says which of the given names
+        it answers.
+
+
+        Each form is a key, looked up once in every partition of the table, which
+        is partitioned on modificationdate, so
+
+        the most names one call may give is the db_read_probe_budget of the server
+        divided by keys_per_name times the
+
+        number of partitions. A call giving more is refused, not cut short. The three
+        numbers come back with every answer,
+
+        so a caller can split its names into calls that fit.
 
 
         POST is accepted too, with the arguments in a JSON body (Content-Type: application/json).
