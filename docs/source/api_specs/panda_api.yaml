@@ -191,10 +191,11 @@ paths:
                     with the first whole line there. Ignored for .gz files, where
                     an arbitrary offset is
 
-                    not a valid stream. On a slow disk the widest window takes about
-                    200 of the 240 s
+                    not a valid stream. Cold disks read 7 to 33 MB/s, so on a slow
+                    day the widest window
 
-                    a grep may run'
+                    does not finish in the 240 s a grep may run; since and until read
+                    fewer bytes'
                 whole_records:
                   type: boolean
                   description: "give each matching line with the rest of its log record:\
@@ -211,12 +212,58 @@ paths:
                     \ the lines\n  of a record whose first line did not match, and\
                     \ so is not the start of its record. cut is true when\n  the record\
                     \ has more lines than were given, which sets truncated too. lines\
-                    \ come without line breaks\n- window: for tail_bytes, {\"offset\"\
-                    : int, \"first_stamp\": str or None}: where the search started,\
-                    \ and\n  the time stamp of the first line from there that starts\
-                    \ with one. Every record starting at or after\n  that line was\
-                    \ searched whole; null without tail_bytes\nDefaults to False,\
-                    \ the matching lines alone as they are in the file"
+                    \ come without line breaks\n- window: for tail_bytes, since or\
+                    \ until, the bytes searched:\n  {\"offset\": int, \"first_stamp\"\
+                    : str or None, \"end\": int or None, \"end_stamp\": str or None,\
+                    \ \"cut\": bool}.\n  offset is where the search started, and first_stamp\
+                    \ the time stamp of the first line from there that\n  starts with\
+                    \ one. end is where it stopped, the start of a record that was\
+                    \ not searched, and end_stamp\n  the time stamp of that record;\
+                    \ both are null when the search ran to the end of the file as\
+                    \ it was when\n  read, as it always does for tail_bytes. Every\
+                    \ record starting at or after offset and before end was\n  searched\
+                    \ whole. cut is true when a time window was cut at 1 GiB, so that\
+                    \ it covers less than was asked:\n  ask again with since set to\
+                    \ end_stamp. A cut window does not set truncated, which keeps\
+                    \ meaning that\n  the result over the bytes searched is not whole,\
+                    \ as it calls for asking differently rather than further.\n  null\
+                    \ without tail_bytes, since or until, or from a machine whose\
+                    \ processor predates them\nDefaults to False, the matching lines\
+                    \ alone as they are in the file"
+                since:
+                  type: string
+                  description: 'search only the bytes of the file that hold the records
+                    at or after this time, in UTC, e.g.
+
+                    `2026-11-02 13:02:12` (ISO 8601 is accepted, and a time with a
+                    UTC offset is converted). The time stamps
+
+                    of the logs are in UTC. The file is bisected on its time stamps,
+                    so a narrow window of a log of many
+
+                    gigabytes reads a few megabytes. The bytes searched start at a
+                    record stamped at least 60 s before
+
+                    since, for records written out of order. That covers the order
+                    within the file only: a difference
+
+                    between the clock the time comes from and the machine''s clock
+                    is for the caller to widen the window
+
+                    by. Only for a plain file, together with whole_records, and not
+                    with tail_bytes. Without until, the
+
+                    search runs to the end of the file. A window of more than 1 GiB
+                    is cut, as window tells'
+                until:
+                  type: string
+                  description: 'search only the bytes that hold the records before
+                    this time, in the same format; they end at a
+
+                    record stamped at least 60 s after until. Without since, the search
+                    starts at the beginning of the file.
+
+                    When both are given, since must be before until'
               required:
               - log_filename
               - pattern
@@ -226,6 +273,8 @@ paths:
               - max_matches
               - tail_bytes
               - whole_records
+              - since
+              - until
       responses:
         '200':
           description: Method called correctly
